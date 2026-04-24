@@ -54,11 +54,11 @@ export default function Home() {
   };
 
   const canSubmit =
-    formData.writingPnC &&
-    formData.bestDescribes &&
-    formData.annualPremium &&
-    formData.name &&
-    formData.email;
+    !!formData.writingPnC &&
+    !!formData.bestDescribes &&
+    !!formData.annualPremium &&
+    !!formData.name &&
+    !!formData.email;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
