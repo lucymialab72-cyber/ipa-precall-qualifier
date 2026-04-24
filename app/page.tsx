@@ -68,10 +68,24 @@ export default function Home() {
     setTrack(determinedTrack);
 
     try {
-      await fetch("/api/submit", {
+      // Submit directly to IPA CRM instead of local API
+      await fetch("https://ipa-crm.vercel.app/api/data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, track: determinedTrack }),
+        body: JSON.stringify({
+          operation: "createContact",
+          params: {
+            encrypted_name: formData.name,
+            encrypted_email: formData.email,
+            encrypted_phone: formData.phone || "",
+            stage: "lead",
+            source: "cold_email_precall",
+            tags: [`cold_email`, `precall_qualifier`, `track:${determinedTrack}`, `writing_pnc:${formData.writingPnC}`, `premium:${formData.annualPremium}`],
+            notes: `Pre-Call Qualifier Submission\n---\nWriting P&C: ${formData.writingPnC}\nBest describes: ${formData.bestDescribes}\nAnnual premium: ${formData.annualPremium}\n${formData.biggestChallenge ? `Biggest challenge: ${formData.biggestChallenge}\n` : ''}Routed to: ${determinedTrack?.toUpperCase()}\n---\nSource: Cold Email Pre-Call Qualifier\nSubmitted: ${new Date().toISOString()}`,
+            program_interest: determinedTrack === "mia" ? "MIA" : "IPA",
+            import_source: "precall_qualifier",
+          },
+        }),
       });
     } catch {
       // Still show results even if API fails
