@@ -190,26 +190,34 @@ export default function Home() {
     setTrack(determinedTrack);
     setSubmitted(true);
 
-    // Save to CRM (fire and forget — don't block the UI)
+    // Save to CRM as form submission (fire and forget)
     try {
-      await fetch("https://ipa-crm.vercel.app/api/data", {
+      fetch("https://ipa-crm.vercel.app/api/data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          operation: "updateContactNotes",
+          action: "createFormSubmission",
           params: {
-            source: "cold_email_precall",
-            tags: [
-              "cold_email",
-              "precall_qualifier",
-              `track:${determinedTrack}`,
-              `situation:${formData.currentSituation}`,
-              `goal:${formData.goal}`,
-              `premium:${formData.premium}`,
-            ],
-            notes: `Pre-Call Qualifier (V2)\n---\nSituation: ${formData.currentSituation}\nGoal: ${formData.goal}\nPremium: ${formData.premium}\n${formData.biggestChallenge ? `Challenge: ${formData.biggestChallenge}\n` : ""}Routed to: ${determinedTrack?.toUpperCase()}\n---\nSubmitted: ${new Date().toISOString()}`,
-            program_interest: determinedTrack === "mia" ? "MIA" : "IPA",
-            import_source: "precall_qualifier_v2",
+            submission: {
+              form_name: "Pre-Call Qualifier V2",
+              source_url: window.location.href,
+              encrypted_data: {
+                situation: formData.currentSituation,
+                goal: formData.goal,
+                premium: formData.premium,
+                challenge: formData.biggestChallenge || "",
+                routed_to: determinedTrack?.toUpperCase(),
+                submitted_at: new Date().toISOString(),
+                tags: [
+                  "cold_email",
+                  "precall_qualifier",
+                  `track:${determinedTrack}`,
+                  `situation:${formData.currentSituation}`,
+                  `goal:${formData.goal}`,
+                  `premium:${formData.premium}`,
+                ],
+              },
+            },
           },
         }),
       });
