@@ -8,7 +8,6 @@ interface FormData {
   currentSituation: string;
   goal: string;
   premium: string;
-  biggestChallenge: string;
 }
 
 const QUESTIONS = [
@@ -156,10 +155,9 @@ export default function Home() {
     currentSituation: "",
     goal: "",
     premium: "",
-    biggestChallenge: "",
   });
 
-  const totalSteps = 4; // 3 questions + optional challenge
+  const totalSteps = 3;
 
   const animateTransition = (nextStep: number) => {
     setFadeIn(false);
@@ -174,58 +172,60 @@ export default function Home() {
   };
 
   const handleRadioSelect = (field: keyof FormData, value: string, step: number) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    setTimeout(() => {
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value };
+
+      // If this is the last question (step 3), submit automatically
       if (step === 3) {
-        // Last question — go to optional challenge
-        animateTransition(4);
+        setTimeout(() => {
+          const determinedTrack = determineTrack(updated);
+          setTrack(determinedTrack);
+          setSubmitted(true);
+
+          // Save to CRM as form submission (fire and forget)
+          try {
+            fetch("https://ipa-crm.vercel.app/api/data", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "createFormSubmission",
+                params: {
+                  submission: {
+                    form_name: "Pre-Call Qualifier V2",
+                    source_url: window.location.href,
+                    encrypted_data: {
+                      situation: updated.currentSituation,
+                      goal: updated.goal,
+                      premium: updated.premium,
+                      routed_to: determinedTrack?.toUpperCase(),
+                      submitted_at: new Date().toISOString(),
+                      tags: [
+                        "cold_email",
+                        "precall_qualifier",
+                        `track:${determinedTrack}`,
+                        `situation:${updated.currentSituation}`,
+                        `goal:${updated.goal}`,
+                        `premium:${updated.premium}`,
+                      ],
+                    },
+                  },
+                },
+              }),
+            });
+          } catch {
+            // Still show results even if API fails
+          }
+
+          animateTransition(4);
+        }, 350);
       } else {
-        animateTransition(step + 1);
+        setTimeout(() => {
+          animateTransition(step + 1);
+        }, 350);
       }
-    }, 350);
-  };
 
-  const handleFinish = async () => {
-    const determinedTrack = determineTrack(formData);
-    setTrack(determinedTrack);
-    setSubmitted(true);
-
-    // Save to CRM as form submission (fire and forget)
-    try {
-      fetch("https://ipa-crm.vercel.app/api/data", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "createFormSubmission",
-          params: {
-            submission: {
-              form_name: "Pre-Call Qualifier V2",
-              source_url: window.location.href,
-              encrypted_data: {
-                situation: formData.currentSituation,
-                goal: formData.goal,
-                premium: formData.premium,
-                challenge: formData.biggestChallenge || "",
-                routed_to: determinedTrack?.toUpperCase(),
-                submitted_at: new Date().toISOString(),
-                tags: [
-                  "cold_email",
-                  "precall_qualifier",
-                  `track:${determinedTrack}`,
-                  `situation:${formData.currentSituation}`,
-                  `goal:${formData.goal}`,
-                  `premium:${formData.premium}`,
-                ],
-              },
-            },
-          },
-        }),
-      });
-    } catch {
-      // Still show results even if API fails
-    }
-
-    animateTransition(5);
+      return updated;
+    });
   };
 
   const progressPercent = submitted
@@ -365,43 +365,12 @@ export default function Home() {
             </QuestionCard>
           )}
 
-          {/* Question 4 — Optional Challenge */}
-          {currentStep === 4 && (
-            <QuestionCard
-              step={4}
-              total={totalSteps}
-              question="Anything else Dave should know?"
-              subtitle="Optional — but it helps him tailor the conversation."
-              optional
-            >
-              <textarea
-                value={formData.biggestChallenge}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    biggestChallenge: e.target.value,
-                  }))
-                }
-                placeholder="e.g., carrier limitations, looking for better profit sharing, want to grow commercial lines..."
-                className="w-full p-4 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-gold focus:border-gold resize-none text-base bg-white"
-                rows={3}
-                autoFocus
-              />
-              <button
-                onClick={handleFinish}
-                className="w-full mt-4 bg-green hover:bg-green-dark text-white font-semibold text-lg py-4 rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
-              >
-                {formData.biggestChallenge ? "Submit →" : "Skip & Finish →"}
-              </button>
-            </QuestionCard>
-          )}
-
           {/* Results */}
-          {currentStep === 5 && <ResultScreen track={track} />}
+          {currentStep === 4 && <ResultScreen track={track} />}
         </div>
 
         {/* Back button */}
-        {currentStep > 1 && currentStep < 5 && (
+        {currentStep > 1 && currentStep < 4 && (
           <button
             onClick={() => animateTransition(currentStep - 1)}
             className="mt-6 text-sm text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1 mx-auto"
