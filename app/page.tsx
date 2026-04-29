@@ -399,7 +399,7 @@ function QualifierContent() {
                   <circle cx="12" cy="12" r="10" />
                   <path d="M12 6v6l4 2" />
                 </svg>
-                Takes less than 30 seconds
+                Takes less than 20 seconds
               </div>
               <button
                 onClick={() => animateTransition(1)}
@@ -745,9 +745,6 @@ function ResultScreen({ track, firstName }: { track: Track; firstName: string })
       <div className="text-center">
         <p className="text-sm text-gray-400">
           Need to reschedule? Use the link in your confirmation email.
-        </p>
-        <p className="text-sm text-gray-400 mt-1">
-          Questions? Call or text (844) 569-7272
         </p>
       </div>
     </div>
