@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
 type Track = "ipa" | "mia" | null;
 
@@ -9,6 +10,8 @@ interface FormData {
   goal: string;
   premium: string;
 }
+
+const CRM_API = "https://ipa-crm.vercel.app";
 
 const QUESTIONS = [
   {
@@ -119,37 +122,35 @@ const QUESTIONS = [
 ];
 
 function determineTrack(data: FormData): Track {
-  // Score-based: count IPA vs MIA signals from questions 1 and 2
   let ipaScore = 0;
   let miaScore = 0;
 
-  // Question 1 — current situation
   const q1 = QUESTIONS[0].options.find((o) => o.value === data.currentSituation);
-  if (q1?.track === "ipa") ipaScore += 2; // situation is weighted heavier
+  if (q1?.track === "ipa") ipaScore += 2;
   if (q1?.track === "mia") miaScore += 2;
 
-  // Question 2 — goal
   const q2 = QUESTIONS[1].options.find((o) => o.value === data.goal);
   if (q2?.track === "ipa") ipaScore += 1;
   if (q2?.track === "mia") miaScore += 1;
 
-  // Strong MIA overrides: no license + any goal = always MIA
   if (data.currentSituation === "no_license") return "mia";
-
-  // Strong IPA overrides: owns agency + wants more carriers = always IPA
   if (data.currentSituation === "own_independent_agency" && data.goal === "more_carriers") return "ipa";
-
-  // If someone is in L&H but wants to BUILD an agency, that's IPA-leaning
   if (data.currentSituation === "life_health_financial" && data.goal === "build_agency") return "ipa";
 
   return ipaScore >= miaScore ? "ipa" : "mia";
 }
 
-export default function Home() {
-  const [currentStep, setCurrentStep] = useState(0); // 0 = intro
+function QualifierContent() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get("t") || "";
+
+  const [currentStep, setCurrentStep] = useState(0);
   const [track, setTrack] = useState<Track>(null);
   const [submitted, setSubmitted] = useState(false);
   const [fadeIn, setFadeIn] = useState(true);
+  const [firstName, setFirstName] = useState("");
+  const [alreadyCompleted, setAlreadyCompleted] = useState(false);
+  const [loading, setLoading] = useState(!!token);
   const containerRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState<FormData>({
     currentSituation: "",
@@ -159,7 +160,30 @@ export default function Home() {
 
   const totalSteps = 3;
 
-  const animateTransition = (nextStep: number) => {
+  // If token present, look up contact info
+  useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    fetch(`${CRM_API}/api/qualifier?token=${encodeURIComponent(token)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) {
+          setFirstName(data.firstName || "");
+          if (data.alreadyCompleted) {
+            setAlreadyCompleted(true);
+          }
+        }
+      })
+      .catch(() => {
+        // Token invalid or API error — continue without personalization
+      })
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const animateTransition = useCallback((nextStep: number) => {
     setFadeIn(false);
     setTimeout(() => {
       setCurrentStep(nextStep);
@@ -169,29 +193,43 @@ export default function Home() {
         block: "start",
       });
     }, 200);
-  };
+  }, []);
 
   const handleRadioSelect = (field: keyof FormData, value: string, step: number) => {
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
 
-      // If this is the last question (step 3), submit automatically
       if (step === 3) {
         setTimeout(() => {
           const determinedTrack = determineTrack(updated);
           setTrack(determinedTrack);
           setSubmitted(true);
 
-          // Save to CRM as form submission (fire and forget)
-          try {
-            fetch("https://ipa-crm.vercel.app/api/data", {
+          // Submit to CRM qualifier API (token-linked) or generic data API
+          if (token) {
+            fetch(`${CRM_API}/api/qualifier`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                token,
+                answers: {
+                  currentSituation: updated.currentSituation,
+                  goal: updated.goal,
+                  premium: updated.premium,
+                },
+                track: determinedTrack,
+              }),
+            }).catch(() => {});
+          } else {
+            // Fallback: no token — save as anonymous form submission
+            fetch(`${CRM_API}/api/data`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 action: "createFormSubmission",
                 params: {
                   submission: {
-                    form_name: "Pre-Call Qualifier V2",
+                    form_name: "Pre-Call Qualifier (No Token)",
                     source_url: window.location.href,
                     encrypted_data: {
                       situation: updated.currentSituation,
@@ -202,18 +240,14 @@ export default function Home() {
                       tags: [
                         "cold_email",
                         "precall_qualifier",
+                        "no_token",
                         `track:${determinedTrack}`,
-                        `situation:${updated.currentSituation}`,
-                        `goal:${updated.goal}`,
-                        `premium:${updated.premium}`,
                       ],
                     },
                   },
                 },
               }),
-            });
-          } catch {
-            // Still show results even if API fails
+            }).catch(() => {});
           }
 
           animateTransition(4);
@@ -231,6 +265,68 @@ export default function Home() {
   const progressPercent = submitted
     ? 100
     : Math.round((currentStep / totalSteps) * 100);
+
+  // Loading state while checking token
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50">
+        <header className="bg-navy text-white py-5 px-6">
+          <div className="max-w-lg mx-auto flex items-center gap-3">
+            <div className="w-11 h-11 bg-gold rounded-full flex items-center justify-center font-bold text-navy text-lg shrink-0">
+              IPA
+            </div>
+            <div>
+              <div className="font-semibold text-lg tracking-tight">Insurance Pro Agencies</div>
+              <div className="text-sm text-gray-300">Pre-Call Preparation</div>
+            </div>
+          </div>
+        </header>
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="w-10 h-10 border-4 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-500">Loading...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Already completed — show "You're All Set" screen
+  if (alreadyCompleted) {
+    return (
+      <main className="min-h-screen bg-gray-50">
+        <header className="bg-navy text-white py-5 px-6">
+          <div className="max-w-lg mx-auto flex items-center gap-3">
+            <div className="w-11 h-11 bg-gold rounded-full flex items-center justify-center font-bold text-navy text-lg shrink-0">
+              IPA
+            </div>
+            <div>
+              <div className="font-semibold text-lg tracking-tight">Insurance Pro Agencies</div>
+              <div className="text-sm text-gray-300">Pre-Call Preparation</div>
+            </div>
+          </div>
+        </header>
+        <div className="max-w-lg mx-auto px-4 py-12">
+          <div className="text-center py-8">
+            <div className="w-20 h-20 bg-green/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <span className="text-4xl">✅</span>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight">
+              You&apos;re All Set{firstName ? `, ${firstName}` : ""}!
+            </h1>
+            <p className="text-lg text-gray-500 max-w-md mx-auto mb-6">
+              Dave already has your answers and will be fully prepared for your call.
+            </p>
+            <div className="bg-green/10 border border-green/20 rounded-xl p-5">
+              <p className="text-sm text-gray-600">
+                Questions before your call? Call or text <strong>(844) 569-7272</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -286,7 +382,7 @@ export default function Home() {
                 <span className="text-4xl">⚡</span>
               </div>
               <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight">
-                Before Your Call with Dave
+                {firstName ? `Hey ${firstName}, before` : "Before"} Your Call with Dave
               </h1>
               <p className="text-lg text-gray-500 mb-2 max-w-md mx-auto">
                 3 quick questions so Dave can prepare the best options for
@@ -314,59 +410,29 @@ export default function Home() {
             </div>
           )}
 
-          {/* Question 1 — Current Situation */}
+          {/* Question 1 */}
           {currentStep === 1 && (
-            <QuestionCard
-              step={1}
-              total={totalSteps}
-              question={QUESTIONS[0].question}
-              subtitle={QUESTIONS[0].subtitle}
-            >
-              <RadioGroup
-                name="currentSituation"
-                value={formData.currentSituation}
-                onChange={(v) => handleRadioSelect("currentSituation", v, 1)}
-                options={QUESTIONS[0].options}
-              />
+            <QuestionCard step={1} total={totalSteps} question={QUESTIONS[0].question} subtitle={QUESTIONS[0].subtitle}>
+              <RadioGroup name="currentSituation" value={formData.currentSituation} onChange={(v) => handleRadioSelect("currentSituation", v, 1)} options={QUESTIONS[0].options} />
             </QuestionCard>
           )}
 
-          {/* Question 2 — Goal */}
+          {/* Question 2 */}
           {currentStep === 2 && (
-            <QuestionCard
-              step={2}
-              total={totalSteps}
-              question={QUESTIONS[1].question}
-              subtitle={QUESTIONS[1].subtitle}
-            >
-              <RadioGroup
-                name="goal"
-                value={formData.goal}
-                onChange={(v) => handleRadioSelect("goal", v, 2)}
-                options={QUESTIONS[1].options}
-              />
+            <QuestionCard step={2} total={totalSteps} question={QUESTIONS[1].question} subtitle={QUESTIONS[1].subtitle}>
+              <RadioGroup name="goal" value={formData.goal} onChange={(v) => handleRadioSelect("goal", v, 2)} options={QUESTIONS[1].options} />
             </QuestionCard>
           )}
 
-          {/* Question 3 — Premium Volume */}
+          {/* Question 3 */}
           {currentStep === 3 && (
-            <QuestionCard
-              step={3}
-              total={totalSteps}
-              question={QUESTIONS[2].question}
-              subtitle={QUESTIONS[2].subtitle}
-            >
-              <RadioGroup
-                name="premium"
-                value={formData.premium}
-                onChange={(v) => handleRadioSelect("premium", v, 3)}
-                options={QUESTIONS[2].options}
-              />
+            <QuestionCard step={3} total={totalSteps} question={QUESTIONS[2].question} subtitle={QUESTIONS[2].subtitle}>
+              <RadioGroup name="premium" value={formData.premium} onChange={(v) => handleRadioSelect("premium", v, 3)} options={QUESTIONS[2].options} />
             </QuestionCard>
           )}
 
           {/* Results */}
-          {currentStep === 4 && <ResultScreen track={track} />}
+          {currentStep === 4 && <ResultScreen track={track} firstName={firstName} />}
         </div>
 
         {/* Back button */}
@@ -380,6 +446,20 @@ export default function Home() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-gold border-t-transparent rounded-full animate-spin" />
+        </main>
+      }
+    >
+      <QualifierContent />
+    </Suspense>
   );
 }
 
@@ -496,7 +576,7 @@ function RadioGroup({
   );
 }
 
-function ResultScreen({ track }: { track: Track }) {
+function ResultScreen({ track, firstName }: { track: Track; firstName: string }) {
   if (track === "mia") {
     return (
       <div className="py-4 space-y-6">
@@ -505,7 +585,7 @@ function ResultScreen({ track }: { track: Track }) {
             <span className="text-3xl">🎯</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
-            We found the perfect fit for you.
+            We found the perfect fit for you{firstName ? `, ${firstName}` : ""}.
           </h2>
           <p className="text-gray-500 text-base max-w-md mx-auto">
             Based on your answers, our{" "}
@@ -536,7 +616,6 @@ function ResultScreen({ track }: { track: Track }) {
           </div>
         </div>
 
-        {/* MIA Video */}
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <h3 className="font-semibold text-gray-900 mb-3 text-center">
             Watch this 2-minute overview:
@@ -584,7 +663,7 @@ function ResultScreen({ track }: { track: Track }) {
           <span className="text-3xl">🏢</span>
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
-          You&apos;re in the right place.
+          You&apos;re in the right place{firstName ? `, ${firstName}` : ""}.
         </h2>
         <p className="text-gray-500 text-base max-w-md mx-auto">
           The <strong>IPA Independent Agency Program</strong> is built for
@@ -593,7 +672,6 @@ function ResultScreen({ track }: { track: Track }) {
         </p>
       </div>
 
-      {/* IPA Video */}
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
         <h3 className="font-semibold text-gray-900 mb-3 text-center">
           Watch this quick overview to prepare:
