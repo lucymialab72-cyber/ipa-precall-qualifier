@@ -599,24 +599,25 @@ function ResultScreen({ track, firstName, answers }: { track: Track; firstName: 
     const goal = answers.goal;
 
     if (sit === "no_license") {
-      reasons.push("The IPA program requires an active P&C license — it's an agency ownership program, so you'd need to be licensed to write business under your own agency.");
-      reasons.push("The good news is you don't need a license to earn commissions through referrals. Plenty of people in real estate, mortgage, and financial services refer clients to us and earn on every policy.");
+      reasons.push("The IPA program requires an active P&C license — it's an agency ownership program where you'd get direct appointments with insurance companies. Those carriers require that you're licensed and ready to write business under your own agency.");
+      reasons.push("The good news is you don't need a license to earn commissions through referrals. Plenty of people in real estate, mortgage, and financial services refer clients to us and earn on every policy that binds.");
     } else if (sit === "life_health_financial") {
-      reasons.push("The IPA program is built for producers who are actively writing P&C business (home, auto, commercial) and want to own their own P&C agency.");
-      reasons.push("Since your background is in life & health or financial services, the agency ownership path would mean starting a P&C operation from scratch — which is a big lift.");
-      reasons.push("What we see work really well for people in your position is referring your clients who need P&C coverage. You already have the relationships — you just need a way to monetize the P&C side without building a whole new agency.");
+      reasons.push("The IPA program offers direct agency code appointments with P&C carriers — companies like Progressive, Nationwide, and Hartford. Those appointments come with production expectations, and the carriers typically want to see at least a few years of P&C experience and a prior book of business.");
+      reasons.push("Since your background is in life & health or financial services, building a P&C agency from scratch would be a big lift. You'd need to develop a whole new pipeline, marketing plan, and carrier relationships from day one.");
+      reasons.push("What we see work really well for people in your position is referring your existing clients who need P&C coverage. You already have the relationships — you just need a way to monetize the P&C side without taking on an entirely new business.");
     } else if (sit === "licensed_not_writing") {
-      reasons.push("The IPA program is designed for producers who are actively writing business and ready to take on the full responsibilities of running an independent agency — compliance, carrier relationships, servicing, the whole operation.");
-      reasons.push("Since you're not actively writing right now, jumping straight into agency ownership would be a heavy lift. Many agents in your position start with our referral program to get back in the game and earn commissions without the overhead.");
+      reasons.push("The IPA program offers direct appointments with major carriers, and those appointments come with expectations — they're typically looking for about $50,000 a year in new business premium. Carriers have been terminating agents who aren't hitting those thresholds, especially coming out of the hard market.");
+      reasons.push("Since you're not actively writing right now, jumping straight into those direct appointments could put you in a tough spot. We wouldn't want you to start and then lose those appointments before you've had a chance to build your pipeline.");
+      reasons.push("A lot of agents in your position start with our referral program to build up their marketing efforts and client relationships first. You can still earn commissions while you're getting established, and if you ever want to transition to the full IPA program with direct carrier access, this builds the track record you'd need.");
     } else if (goal === "passive_income") {
-      reasons.push("The IPA Independent Agency Program isn't passive — it's building and running your own agency. That means carrier management, compliance, servicing clients, and growing a book of business.");
-      reasons.push("Based on what you're looking for, our referral program is a much better fit. You share a link, clients get quoted by licensed advisors, and you earn commissions on every policy. No agency to run, no overhead, no servicing.");
+      reasons.push("The IPA Independent Agency Program isn't passive — it's building and running your own agency. That means managing carrier relationships, meeting production expectations, handling compliance, and servicing your clients. The carriers expect you to write business right out of the gate.");
+      reasons.push("Based on what you're looking for, our referral program is a much better fit. You get your own share link, send it to people who need insurance, and our national partner handles all the quoting, binding, and servicing. You earn commissions on every policy — new and renewal — without doing any of the work.");
     } else if (goal === "add_pnc") {
-      reasons.push("The IPA program is a full agency ownership model — it's designed for producers who want to build an independent P&C agency from the ground up.");
-      reasons.push("Since you're looking to add P&C as a complement to your existing practice (not replace it), our referral program lets you do exactly that. Your clients get great P&C coverage, you earn commissions, and you stay focused on what you do best.");
+      reasons.push("The IPA program is a full agency ownership model — direct carrier appointments, production requirements, compliance obligations. It's designed for producers who want to build an independent P&C agency as their primary business.");
+      reasons.push("Since you're looking to add P&C as a complement to your existing practice, our referral program is a better path. Your clients get access to 50+ carriers, you earn about 40% of what the carrier pays on every policy, and you stay focused on what you do best. You still own the book, and if things grow, you can always transition to the full IPA program down the road.");
     } else {
-      reasons.push("The IPA program is designed for experienced P&C producers who are ready to own and operate their own independent agency.");
-      reasons.push("Based on your answers, our referral program may be a better starting point. It lets you earn commissions without the overhead of running a full agency.");
+      reasons.push("The IPA program offers direct agency code appointments with major insurance carriers. Those appointments come with production expectations — typically around $50,000 a year in new business premium per carrier — and the carriers require prior experience and a proven track record.");
+      reasons.push("Based on your answers, our referral program may be a better starting point. You can start earning commissions right away, build up your client base and marketing efforts, and you still own the book. If you decide to open your own agency down the road, you'll have already established the track record these carriers look for.");
     }
 
     return reasons;
@@ -776,13 +777,28 @@ function ResultScreen({ track, firstName, answers }: { track: Track; firstName: 
           <h3 className="font-semibold text-gray-900 mb-2">
             But we do have something that might be perfect for you.
           </h3>
-          <p className="text-gray-600 text-sm mb-4">
-            Our <strong>referral program</strong> lets you earn commissions by simply sharing a link
-            with people who need insurance — no agency to build, no overhead, no risk.
-            You keep your current job and earn on every policy that binds.
+          <p className="text-gray-600 text-sm mb-3">
+            We recently launched a <strong>referral program</strong> in partnership with
+            one of the largest personal lines brokerages in the country. They handle
+            all the quoting, binding, and servicing — you just refer.
           </p>
+          <div className="space-y-2 mb-3">
+            {[
+              "You get your own unique share link — basically a branded website with your name on it",
+              "Send it to anyone who needs insurance. They click, get quotes from 50+ carriers, and our national partner handles the rest",
+              "You earn about 40% of what the carrier pays — on new business and every renewal, year after year",
+              "You get a portal dashboard where you can see in real time where each referral is in the quoting process",
+              "You still own the book. If you ever want to transition to a full independent agency, this builds your track record",
+            ].map((text, i) => (
+              <div key={i} className="flex items-start gap-2.5">
+                <span className="text-green mt-0.5 shrink-0">✓</span>
+                <span className="text-gray-600 text-sm">{text}</span>
+              </div>
+            ))}
+          </div>
           <p className="text-gray-500 text-sm">
             It&apos;s free to join, takes about 2 minutes to sign up, and works in all 50 states.
+            Zero cost, zero risk.
           </p>
         </div>
 
