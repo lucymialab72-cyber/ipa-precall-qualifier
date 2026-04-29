@@ -577,79 +577,206 @@ function RadioGroup({
 }
 
 function ResultScreen({ track, firstName }: { track: Track; firstName: string }) {
+  const [choice, setChoice] = useState<"none" | "mia" | "cancel" | "keep">("none");
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async (reason: string) => {
+    setCancelling(true);
+    try {
+      // Get token from URL to find the booking and cancel it
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("t");
+      if (token) {
+        await fetch(`https://ipa-crm.vercel.app/api/qualifier?action=cancel-booking&token=${token}&reason=${encodeURIComponent(reason)}`, { method: "POST" });
+      }
+    } catch { /* best effort */ }
+    setCancelling(false);
+  };
+
   if (track === "mia") {
+    // === SOFT REDIRECT: Not IPA-fit, offer 3 options ===
+    if (choice === "mia") {
+      return (
+        <div className="py-4 space-y-6">
+          <div className="text-center mb-2">
+            <div className="w-16 h-16 bg-green/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">🎯</span>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
+              Great choice{firstName ? `, ${firstName}` : ""}!
+            </h2>
+            <p className="text-gray-500 text-base max-w-md mx-auto">
+              Our referral program lets you earn commissions
+              without running a full agency. Here&apos;s how it works:
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 border border-gray-200">
+            <div className="space-y-3">
+              {[
+                "Sign up free in under 5 minutes",
+                "Get your personal agent portal & share link",
+                "Send your link to anyone who needs insurance",
+                "50+ carriers quote them in minutes — we handle everything",
+                "You earn commissions on every policy and renewal",
+              ].map((text, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className="w-7 h-7 bg-green text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                    {i + 1}
+                  </div>
+                  <span className="text-gray-700 text-base">{text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 border border-gray-200">
+            <h3 className="font-semibold text-gray-900 mb-3 text-center">
+              Watch this 2-minute overview:
+            </h3>
+            <div className="aspect-video bg-navy rounded-xl overflow-hidden">
+              <iframe
+                src="https://player.vimeo.com/video/1187711595?h=0&title=0&byline=0&portrait=0"
+                className="w-full h-full"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <a
+              href="https://myindependentagent.com/activate?utm_source=cold_email&utm_medium=precall&utm_campaign=mia_qualifier"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full text-center bg-green hover:bg-green-dark text-white font-semibold text-lg py-4 rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
+            >
+              Activate Your Free Account →
+            </a>
+            <p className="text-center text-sm text-gray-400">
+              Free. No credit card. Takes under 2 minutes.
+            </p>
+          </div>
+
+          <div className="bg-navy/5 rounded-xl p-4 text-center">
+            <p className="text-sm text-gray-600">
+              We&apos;ve cancelled your IPA discovery call since this program is self-service.
+              No further action needed on your end!
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (choice === "cancel") {
+      return (
+        <div className="py-4 space-y-6 text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">👋</span>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            No worries{firstName ? `, ${firstName}` : ""}!
+          </h2>
+          <p className="text-gray-500 max-w-md mx-auto">
+            We&apos;ve gone ahead and cancelled your upcoming call so you don&apos;t need to worry about it.
+          </p>
+          <p className="text-gray-400 text-sm max-w-md mx-auto">
+            If anything changes down the road, you can always reach us at{" "}
+            <strong>(844) 569-7272</strong> or visit{" "}
+            <a href="https://insuranceproagencies.com" className="text-blue-600 underline">insuranceproagencies.com</a>.
+          </p>
+          <p className="text-gray-400 text-sm">
+            We wish you all the best! 🙏
+          </p>
+        </div>
+      );
+    }
+
+    if (choice === "keep") {
+      return (
+        <div className="py-4 space-y-6 text-center">
+          <div className="w-16 h-16 bg-green/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">📞</span>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Sounds good{firstName ? `, ${firstName}` : ""}!
+          </h2>
+          <p className="text-gray-500 max-w-md mx-auto">
+            Your call with Dave is still on the calendar. He&apos;ll be happy to walk through
+            everything with you and answer any questions.
+          </p>
+          <div className="bg-white rounded-2xl p-5 border border-gray-200 max-w-sm mx-auto">
+            <p className="text-sm text-gray-600">
+              Dave will be calling from:<br />
+              <strong className="text-gray-900 text-lg">(844) 569-7272</strong>
+            </p>
+            <p className="text-xs text-gray-400 mt-2">Please have your phone nearby at your scheduled time.</p>
+          </div>
+        </div>
+      );
+    }
+
+    // === DEFAULT: Show the "not a fit" explanation with 3 options ===
     return (
       <div className="py-4 space-y-6">
         <div className="text-center mb-2">
-          <div className="w-16 h-16 bg-green/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">🎯</span>
+          <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">💡</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
-            We found the perfect fit for you{firstName ? `, ${firstName}` : ""}.
+            Thanks for your answers{firstName ? `, ${firstName}` : ""}.
           </h2>
           <p className="text-gray-500 text-base max-w-md mx-auto">
-            Based on your answers, our{" "}
-            <strong>MIA Referral Program</strong> lets you earn commissions
-            without running a full agency.
+            Based on what you shared, our <strong>IPA Independent Agency Program</strong> may not
+            be the best fit right now. This program is designed for experienced producers
+            who are ready to own and operate their own independent agency.
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-gray-200">
-          <h3 className="font-semibold text-gray-900 mb-4">
-            Here&apos;s how it works:
-          </h3>
-          <div className="space-y-3">
-            {[
-              "Sign up free in under 5 minutes",
-              "Get your personal agent portal & share link",
-              "Send your link to anyone who needs insurance",
-              "50+ carriers quote them in minutes — we handle everything",
-              "You earn commissions on every policy and renewal",
-            ].map((text, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="w-7 h-7 bg-green text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                  {i + 1}
-                </div>
-                <span className="text-gray-700 text-base">{text}</span>
-              </div>
-            ))}
-          </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+          <h3 className="font-semibold text-amber-900 mb-2 text-sm">Why it may not be a match:</h3>
+          <ul className="text-sm text-amber-800 space-y-1.5">
+            <li>• The IPA program requires an active P&C license and experience writing business</li>
+            <li>• It&apos;s built for producers ready to take on the responsibilities of running their own agency</li>
+            <li>• This isn&apos;t a knock on you — it&apos;s just about timing and fit</li>
+          </ul>
         </div>
 
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
-          <h3 className="font-semibold text-gray-900 mb-3 text-center">
-            Watch this 2-minute overview:
+          <h3 className="font-semibold text-gray-900 mb-2">
+            But we do have something that might be perfect for you.
           </h3>
-          <div className="aspect-video bg-navy rounded-xl overflow-hidden">
-            <iframe
-              src="https://player.vimeo.com/video/1187711595?h=0&title=0&byline=0&portrait=0"
-              className="w-full h-full"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
+          <p className="text-gray-600 text-sm mb-4">
+            Our <strong>referral program</strong> lets you earn commissions by simply sharing a link
+            with people who need insurance — no agency to build, no overhead, no risk.
+            You keep your current job and earn on every policy that binds.
+          </p>
+          <p className="text-gray-500 text-sm">
+            It&apos;s free to join, takes about 2 minutes to sign up, and works in all 50 states.
+          </p>
         </div>
 
         <div className="space-y-3">
-          <a
-            href="https://myindependentagent.com/activate?utm_source=cold_email&utm_medium=precall&utm_campaign=mia_qualifier"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full text-center bg-green hover:bg-green-dark text-white font-semibold text-lg py-4 rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
+          <button
+            onClick={() => { setChoice("mia"); handleCancel("Redirected to MIA referral program"); }}
+            disabled={cancelling}
+            className="block w-full text-center bg-green hover:bg-green-dark text-white font-semibold text-base py-4 rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-50"
           >
-            Activate Your Free Account →
-          </a>
-          <p className="text-center text-sm text-gray-400">
-            Free. No credit card. Takes under 2 minutes.
-          </p>
-        </div>
-
-        <div className="bg-navy/5 rounded-xl p-4 text-center">
-          <p className="text-sm text-gray-600">
-            Your call with Dave is still on the calendar. Activate now and
-            Dave can answer any remaining questions — or cancel the call if
-            you&apos;re all set.
-          </p>
+            Yes, show me the referral program →
+          </button>
+          <button
+            onClick={() => { setChoice("cancel"); handleCancel("Not interested after qualifier"); }}
+            disabled={cancelling}
+            className="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-base py-4 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
+          >
+            No thanks, cancel my call
+          </button>
+          <button
+            onClick={() => setChoice("keep")}
+            className="block w-full text-center text-gray-500 hover:text-gray-700 font-medium text-sm py-3 transition-colors underline decoration-gray-300 underline-offset-4"
+          >
+            I&apos;d still like to talk to Dave
+          </button>
         </div>
       </div>
     );
