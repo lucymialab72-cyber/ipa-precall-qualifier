@@ -432,7 +432,7 @@ function QualifierContent() {
           )}
 
           {/* Results */}
-          {currentStep === 4 && <ResultScreen track={track} firstName={firstName} />}
+          {currentStep === 4 && <ResultScreen track={track} firstName={firstName} answers={formData} />}
         </div>
 
         {/* Back button */}
@@ -576,14 +576,13 @@ function RadioGroup({
   );
 }
 
-function ResultScreen({ track, firstName }: { track: Track; firstName: string }) {
+function ResultScreen({ track, firstName, answers }: { track: Track; firstName: string; answers: FormData }) {
   const [choice, setChoice] = useState<"none" | "mia" | "cancel" | "keep">("none");
   const [cancelling, setCancelling] = useState(false);
 
   const handleCancel = async (reason: string) => {
     setCancelling(true);
     try {
-      // Get token from URL to find the booking and cancel it
       const params = new URLSearchParams(window.location.search);
       const token = params.get("t");
       if (token) {
@@ -591,6 +590,36 @@ function ResultScreen({ track, firstName }: { track: Track; firstName: string })
       }
     } catch { /* best effort */ }
     setCancelling(false);
+  };
+
+  // Dynamic reasons based on actual answers (mirrors Dave's real call patterns)
+  const getRedirectReasons = () => {
+    const reasons: string[] = [];
+    const sit = answers.currentSituation;
+    const goal = answers.goal;
+
+    if (sit === "no_license") {
+      reasons.push("The IPA program requires an active P&C license — it's an agency ownership program, so you'd need to be licensed to write business under your own agency.");
+      reasons.push("The good news is you don't need a license to earn commissions through referrals. Plenty of people in real estate, mortgage, and financial services refer clients to us and earn on every policy.");
+    } else if (sit === "life_health_financial") {
+      reasons.push("The IPA program is built for producers who are actively writing P&C business (home, auto, commercial) and want to own their own P&C agency.");
+      reasons.push("Since your background is in life & health or financial services, the agency ownership path would mean starting a P&C operation from scratch — which is a big lift.");
+      reasons.push("What we see work really well for people in your position is referring your clients who need P&C coverage. You already have the relationships — you just need a way to monetize the P&C side without building a whole new agency.");
+    } else if (sit === "licensed_not_writing") {
+      reasons.push("The IPA program is designed for producers who are actively writing business and ready to take on the full responsibilities of running an independent agency — compliance, carrier relationships, servicing, the whole operation.");
+      reasons.push("Since you're not actively writing right now, jumping straight into agency ownership would be a heavy lift. Many agents in your position start with our referral program to get back in the game and earn commissions without the overhead.");
+    } else if (goal === "passive_income") {
+      reasons.push("The IPA Independent Agency Program isn't passive — it's building and running your own agency. That means carrier management, compliance, servicing clients, and growing a book of business.");
+      reasons.push("Based on what you're looking for, our referral program is a much better fit. You share a link, clients get quoted by licensed advisors, and you earn commissions on every policy. No agency to run, no overhead, no servicing.");
+    } else if (goal === "add_pnc") {
+      reasons.push("The IPA program is a full agency ownership model — it's designed for producers who want to build an independent P&C agency from the ground up.");
+      reasons.push("Since you're looking to add P&C as a complement to your existing practice (not replace it), our referral program lets you do exactly that. Your clients get great P&C coverage, you earn commissions, and you stay focused on what you do best.");
+    } else {
+      reasons.push("The IPA program is designed for experienced P&C producers who are ready to own and operate their own independent agency.");
+      reasons.push("Based on your answers, our referral program may be a better starting point. It lets you earn commissions without the overhead of running a full agency.");
+    }
+
+    return reasons;
   };
 
   if (track === "mia") {
@@ -734,12 +763,13 @@ function ResultScreen({ track, firstName }: { track: Track; firstName: string })
         </div>
 
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-          <h3 className="font-semibold text-amber-900 mb-2 text-sm">Why it may not be a match:</h3>
-          <ul className="text-sm text-amber-800 space-y-1.5">
-            <li>• The IPA program requires an active P&C license and experience writing business</li>
-            <li>• It&apos;s built for producers ready to take on the responsibilities of running their own agency</li>
-            <li>• This isn&apos;t a knock on you — it&apos;s just about timing and fit</li>
-          </ul>
+          <h3 className="font-semibold text-amber-900 mb-3 text-sm">Here&apos;s why:</h3>
+          <div className="space-y-2.5">
+            {getRedirectReasons().map((reason, i) => (
+              <p key={i} className="text-sm text-amber-800 leading-relaxed">{reason}</p>
+            ))}
+          </div>
+          <p className="text-sm text-amber-700 mt-3 font-medium">This isn&apos;t a knock on you at all — it&apos;s just about finding the right fit.</p>
         </div>
 
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
