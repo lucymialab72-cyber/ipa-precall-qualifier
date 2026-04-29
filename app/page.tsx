@@ -622,7 +622,7 @@ function ResultScreen({ track, firstName }: { track: Track; firstName: string })
           </h3>
           <div className="aspect-video bg-navy rounded-xl overflow-hidden">
             <iframe
-              src="https://player.vimeo.com/video/1174363630?h=0&title=0&byline=0&portrait=0"
+              src="https://player.vimeo.com/video/1187711595?h=0&title=0&byline=0&portrait=0"
               className="w-full h-full"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
@@ -676,14 +676,13 @@ function ResultScreen({ track, firstName }: { track: Track; firstName: string })
         <h3 className="font-semibold text-gray-900 mb-3 text-center">
           Watch this quick overview to prepare:
         </h3>
-        <div className="aspect-video bg-navy rounded-xl overflow-hidden flex items-center justify-center">
-          <div className="text-center text-white p-8">
-            <div className="text-5xl mb-4">▶️</div>
-            <p className="text-lg font-semibold mb-2">
-              IPA Program Overview
-            </p>
-            <p className="text-sm opacity-70">Video coming soon</p>
-          </div>
+        <div className="aspect-video bg-navy rounded-xl overflow-hidden">
+          <iframe
+            src="https://player.vimeo.com/video/1187689895?h=0&title=0&byline=0&portrait=0"
+            className="w-full h-full"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+          />
         </div>
       </div>
 
