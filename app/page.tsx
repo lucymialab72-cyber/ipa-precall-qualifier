@@ -32,6 +32,12 @@ const QUESTIONS = [
         track: "ipa" as const,
       },
       {
+        value: "producer_at_agency",
+        label: "I'm a producer at an independent agency",
+        icon: "🏗️",
+        track: "ipa" as const,
+      },
+      {
         value: "licensed_not_writing",
         label: "I have my P&C license but I'm not actively writing",
         icon: "📋",
@@ -90,8 +96,8 @@ const QUESTIONS = [
   },
   {
     key: "premium" as const,
-    question: "What's your current P&C premium volume?",
-    subtitle: "Helps Dave prepare the right plan for your call.",
+    question: "How much P&C business have you built from scratch?",
+    subtitle: "Your personal production — not inherited or purchased. Best estimate is fine.",
     options: [
       {
         value: "none",
@@ -135,6 +141,7 @@ function determineTrack(data: FormData): Track {
 
   if (data.currentSituation === "no_license") return "mia";
   if (data.currentSituation === "own_independent_agency" && data.goal === "more_carriers") return "ipa";
+  if (data.currentSituation === "producer_at_agency") return "ipa";
   if (data.currentSituation === "life_health_financial" && data.goal === "build_agency") return "ipa";
 
   return ipaScore >= miaScore ? "ipa" : "mia";
